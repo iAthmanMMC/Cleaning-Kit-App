@@ -23,7 +23,8 @@ Imports:
     stats,
     utils,
     withr,
-    yaml
+    yaml,
+    zip
 Suggests:
     pkgload,
     testthat (>= 3.0.0)

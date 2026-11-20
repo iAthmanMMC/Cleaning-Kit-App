@@ -81,7 +81,7 @@ mod_review_ui <- function(id) {
 }
 
 #' @noRd
-mod_review_server <- function(id, store) {
+mod_review_server <- function(id, store, hosted = FALSE) {
   shiny::moduleServer(id, function(input, output, session) {
     refresh <- shiny::reactiveVal(0)
 
@@ -254,9 +254,13 @@ mod_review_server <- function(id, store) {
           htmltools::p(
             class = "ck-hint",
             "Send it to the reviewers. They fill in Action taken / New value ",
-            "and save the edited copy back in output/follow_ups/ ending in ",
+            "and save the edited copy with a name ending in ",
             htmltools::code("_edited"),
-            "."
+            if (hosted) {
+              ". Download the workspace now if you are closing the tab; then upload the edited copy on the Import reviewed screen."
+            } else {
+              ", back in output/follow_ups/."
+            }
           ),
           htmltools::div(
             class = "d-flex gap-2",
@@ -265,12 +269,15 @@ mod_review_server <- function(id, store) {
               "Download",
               class = "btn-primary"
             ),
-            shiny::actionButton(
-              session$ns("open_folder"),
-              "Show in folder",
-              icon = shiny::icon("folder-open"),
-              class = "btn-outline-primary"
-            )
+            # hosted, the folder is on the server, not the user's computer
+            if (!hosted) {
+              shiny::actionButton(
+                session$ns("open_folder"),
+                "Show in folder",
+                icon = shiny::icon("folder-open"),
+                class = "btn-outline-primary"
+              )
+            }
           )
         )
       )
@@ -283,10 +290,12 @@ mod_review_server <- function(id, store) {
       }
     )
 
-    shiny::observeEvent(input$open_folder, {
-      shiny::req(store$review_path)
-      open_folder(dirname(store$review_path))
-    })
+    if (!hosted) {
+      shiny::observeEvent(input$open_folder, {
+        shiny::req(store$review_path)
+        open_folder(dirname(store$review_path))
+      })
+    }
 
     output$files <- DT::renderDT({
       refresh()

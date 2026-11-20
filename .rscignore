@@ -1,0 +1,18 @@
+# Files rsconnect must never upload. generate_manifest.R lists the files to
+# bundle explicitly; this covers a deployment made any other way.
+#
+# .RData and .Rhistory are a saved R session: if a dataset was loaded when it
+# was saved, uploading them would put respondent data on the server.
+.RData
+.Rhistory
+.Rproj.user
+.git
+.gitignore
+.github
+.claude
+Claude outputs
+tests
+man
+docs
+PLAN.md
+generate_manifest.R

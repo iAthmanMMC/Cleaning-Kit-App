@@ -6,8 +6,14 @@ It walks you through the whole round—checking the raw KoboToolbox export,
 making the review workbook, reading the reviewers' edits back and writing
 the final output—without editing R scripts.
 
-The app runs **on your own computer**. Survey data never leaves your machine:
-the app only reads and writes files in the project folder you open.
+You can use it two ways:
+
+- **Online**, with nothing to install. Each browser tab gets its own
+  temporary workspace, which is deleted when you close or refresh the tab.
+  Download the workspace to keep your work between days. See
+  [docs/deployment.md](docs/deployment.md) for what happens to the data.
+- **On your own computer.** Survey data never leaves your machine: the app
+  only reads and writes files in the project folder you open.
 
 ## Install (once)
 

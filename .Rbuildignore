@@ -6,3 +6,7 @@
 ^PLAN\.md$
 ^CLAUDE\.md$
 ^Claude outputs$
+^generate_manifest\.R$
+^manifest\.json$
+^\.rscignore$
+^docs$

@@ -5,49 +5,53 @@
 #' `enumerator_column`, `date_column`, `skip_label_row`).
 #'
 #' @noRd
-mod_project_ui <- function(id) {
+mod_project_ui <- function(id, hosted = FALSE) {
   ns <- shiny::NS(id)
   bslib::layout_columns(
     col_widths = c(7, 5),
-    bslib::card(
-      bslib::card_header("Project folder"),
-      htmltools::p(
-        class = "ck-hint",
-        "One folder per survey round. cleaningkit keeps the raw exports in ",
-        htmltools::code("data/"),
-        ", the XLSForm and checklists in ",
-        htmltools::code("resources/"),
-        " and everything it produces in ",
-        htmltools::code("output/"),
-        "."
-      ),
-      htmltools::div(
-        class = "d-flex gap-2 align-items-end",
-        htmltools::div(
-          class = "flex-grow-1",
-          shiny::textInput(
-            ns("path"),
-            "Folder path",
-            placeholder = "C:/Users/me/4Mi/round_12",
-            width = "100%"
-          )
+    if (hosted) {
+      workspace_card(ns)
+    } else {
+      bslib::card(
+        bslib::card_header("Project folder"),
+        htmltools::p(
+          class = "ck-hint",
+          "One folder per survey round. cleaningkit keeps the raw exports in ",
+          htmltools::code("data/"),
+          ", the XLSForm and checklists in ",
+          htmltools::code("resources/"),
+          " and everything it produces in ",
+          htmltools::code("output/"),
+          "."
         ),
         htmltools::div(
-          class = "mb-3",
-          shinyFiles::shinyDirButton(
-            ns("browse"),
-            "Browse...",
-            title = "Choose the project folder",
-            class = "btn-outline-primary"
+          class = "d-flex gap-2 align-items-end",
+          htmltools::div(
+            class = "flex-grow-1",
+            shiny::textInput(
+              ns("path"),
+              "Folder path",
+              placeholder = "C:/Users/me/4Mi/round_12",
+              width = "100%"
+            )
+          ),
+          htmltools::div(
+            class = "mb-3",
+            shinyFiles::shinyDirButton(
+              ns("browse"),
+              "Browse...",
+              title = "Choose the project folder",
+              class = "btn-outline-primary"
+            )
+          ),
+          htmltools::div(
+            class = "mb-3",
+            shiny::actionButton(ns("open"), "Open", class = "btn-primary")
           )
         ),
-        htmltools::div(
-          class = "mb-3",
-          shiny::actionButton(ns("open"), "Open", class = "btn-primary")
-        )
-      ),
-      shiny::uiOutput(ns("folder_status"))
-    ),
+        shiny::uiOutput(ns("folder_status"))
+      )
+    },
     bslib::card(
       bslib::card_header("Settings used in every step"),
       htmltools::p(
@@ -78,20 +82,68 @@ mod_project_ui <- function(id) {
   )
 }
 
-#' @param initial_dir Folder to open on start-up, or `NULL`.
+#' The Project card when the app is hosted: a temporary workspace instead of
+#' a folder on the user's disk
 #' @noRd
-mod_project_server <- function(id, store, initial_dir = NULL) {
+workspace_card <- function(ns) {
+  bslib::card(
+    bslib::card_header("Your workspace"),
+    htmltools::p(
+      "This copy of the app runs online. The files you upload go into a ",
+      "temporary workspace that only this browser tab can see. It is ",
+      htmltools::strong("deleted when you close or refresh the tab"),
+      ", or when the app goes idle."
+    ),
+    htmltools::p(
+      class = "ck-hint",
+      "A round takes days: download the workspace before you close the tab ",
+      "(for example after making the review workbook) and upload it again ",
+      "to carry on. It holds the data, the settings, the logs and the list of ",
+      "surveys already cleaned, so keep it as safely as the data itself."
+    ),
+    htmltools::div(
+      class = "d-flex flex-wrap gap-2 align-items-end",
+      shiny::downloadButton(
+        ns("download_workspace"),
+        "Download workspace (.zip)",
+        class = "btn-primary mb-3"
+      ),
+      htmltools::div(
+        class = "flex-grow-1",
+        shiny::fileInput(
+          ns("upload_workspace"),
+          "Continue a round",
+          accept = ".zip",
+          buttonLabel = "Upload workspace...",
+          placeholder = "a .zip from this app or a zipped project folder"
+        )
+      )
+    ),
+    shiny::uiOutput(ns("folder_status"))
+  )
+}
+
+#' @param initial_dir Folder to open on start-up, or `NULL`. Ignored when
+#'   hosted.
+#' @param hosted Run as a hosted app: see `R/hosted.R`.
+#' @noRd
+mod_project_server <- function(id, store, initial_dir = NULL, hosted = FALSE) {
   shiny::moduleServer(id, function(input, output, session) {
-    volumes <- c(
-      Home = normalizePath("~", winslash = "/"),
-      shinyFiles::getVolumes()()
-    )
-    shinyFiles::shinyDirChoose(
-      input,
-      "browse",
-      roots = volumes,
-      session = session
-    )
+    # Hosted, the folder browser is never set up: its server-side observer
+    # would list the server's own disk to anyone who sends the input.
+    volumes <- NULL
+    if (!hosted) {
+      volumes <- c(
+        Home = normalizePath("~", winslash = "/"),
+        shinyFiles::getVolumes()()
+      )
+      shinyFiles::shinyDirChoose(
+        input,
+        "browse",
+        roots = volumes,
+        session = session
+      )
+    }
 
     # bumped after anything that changes the folders, so the status refreshes
     refresh <- shiny::reactiveVal(0)
@@ -130,7 +182,8 @@ mod_project_server <- function(id, store, initial_dir = NULL) {
           time = format(Sys.time(), "%H:%M:%S"),
           step = "Open project",
           level = "info",
-          text = paste0("Opened ", path),
+          # hosted, the server path means nothing to the user
+          text = if (hosted) "Opened a workspace" else paste0("Opened ", path),
           stringsAsFactors = FALSE
         )
       )
@@ -160,24 +213,81 @@ mod_project_server <- function(id, store, initial_dir = NULL) {
       )
     }
 
-    if (!is.null(initial_dir)) {
-      shiny::observeEvent(TRUE, open_project(initial_dir), once = TRUE)
-    }
+    if (hosted) {
+      # One workspace per session, removed when the session ends. Uploading
+      # a workspace replaces it with a new one and removes the old.
+      workspace <- new_workspace(templates = TRUE)
+      # registered first, so the folder goes even if opening it fails
+      session$onSessionEnded(function() remove_workspace(workspace))
+      shiny::isolate(open_project(workspace))
 
-    shiny::observeEvent(input$browse, {
-      chosen <- shinyFiles::parseDirPath(volumes, input$browse)
-      if (length(chosen) == 1 && nzchar(chosen)) {
-        open_project(chosen)
+      shiny::observeEvent(input$upload_workspace, {
+        up <- input$upload_workspace
+        new_dir <- tryCatch(
+          restore_workspace(up$datapath),
+          error = function(e) {
+            shiny::showNotification(
+              conditionMessage(e),
+              type = "error",
+              duration = NULL
+            )
+            NULL
+          }
+        )
+        unlink(up$datapath)
+        shiny::req(new_dir)
+        old <- workspace
+        workspace <<- new_dir
+        open_project(new_dir)
+        remove_workspace(old)
+        shiny::showNotification(
+          paste0("Opened ", up$name, ". Load the tool and data to carry on."),
+          type = "message",
+          duration = 8
+        )
+      })
+
+      output$download_workspace <- shiny::downloadHandler(
+        filename = function() workspace_zip_name(),
+        content = function(file) zip_workspace(store$project_dir, file),
+        contentType = "application/zip"
+      )
+    } else {
+      if (!is.null(initial_dir)) {
+        shiny::observeEvent(TRUE, open_project(initial_dir), once = TRUE)
       }
-    })
 
-    shiny::observeEvent(input$open, open_project(input$path))
+      shiny::observeEvent(input$browse, {
+        chosen <- shinyFiles::parseDirPath(volumes, input$browse)
+        if (length(chosen) == 1 && nzchar(chosen)) {
+          open_project(chosen)
+        }
+      })
+
+      shiny::observeEvent(input$open, open_project(input$path))
+    }
 
     output$folder_status <- shiny::renderUI({
       refresh()
       dir <- store$project_dir
       if (is.null(dir)) {
         return(htmltools::p(class = "ck-hint", "No project open yet."))
+      }
+      if (hosted) {
+        status <- project_folder_status(dir)
+        return(htmltools::tags$ul(
+          class = "ck-status-list mt-2",
+          lapply(seq_len(nrow(status)), function(i) {
+            htmltools::tags$li(
+              status_icon(if (status$files[i] > 0) "done" else "todo"),
+              htmltools::code(status$folder[i]),
+              htmltools::span(
+                class = "ck-status-detail",
+                paste0(status$files[i], " file(s)")
+              )
+            )
+          })
+        ))
       }
       status <- project_folder_status(dir)
       rows <- lapply(seq_len(nrow(status)), function(i) {

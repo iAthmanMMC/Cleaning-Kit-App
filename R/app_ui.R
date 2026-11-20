@@ -6,6 +6,7 @@
 #' @param request Needed for bookmarking; unused.
 #' @noRd
 app_ui <- function(request) {
+  hosted <- ck_is_server()
   bslib::page_navbar(
     title = htmltools::span(
       shiny::icon("broom"),
@@ -25,7 +26,7 @@ app_ui <- function(request) {
       "Project",
       value = "project",
       icon = shiny::icon("folder-open"),
-      mod_project_ui("project")
+      mod_project_ui("project", hosted = hosted)
     ),
     bslib::nav_menu(
       "Validate",

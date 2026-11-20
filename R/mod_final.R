@@ -45,7 +45,7 @@ mod_final_ui <- function(id) {
 }
 
 #' @noRd
-mod_final_server <- function(id, store) {
+mod_final_server <- function(id, store, hosted = FALSE) {
   shiny::moduleServer(id, function(input, output, session) {
     fields <- c(
       "project_name",
@@ -218,12 +218,15 @@ mod_final_server <- function(id, store) {
                   "Download",
                   class = "btn-primary"
                 ),
-                shiny::actionButton(
-                  session$ns("open_folder"),
-                  "Show in folder",
-                  icon = shiny::icon("folder-open"),
-                  class = "btn-outline-primary"
-                )
+                # hosted, the folder is on the server, not the user's computer
+                if (!hosted) {
+                  shiny::actionButton(
+                    session$ns("open_folder"),
+                    "Show in folder",
+                    icon = shiny::icon("folder-open"),
+                    class = "btn-outline-primary"
+                  )
+                }
               )
             )
           )
@@ -251,9 +254,11 @@ mod_final_server <- function(id, store) {
       }
     )
 
-    shiny::observeEvent(input$open_folder, {
-      shiny::req(store$final_path)
-      open_folder(dirname(store$final_path))
-    })
+    if (!hosted) {
+      shiny::observeEvent(input$open_folder, {
+        shiny::req(store$final_path)
+        open_folder(dirname(store$final_path))
+      })
+    }
   })
 }

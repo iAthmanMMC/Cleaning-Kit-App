@@ -96,6 +96,9 @@ review_files <- function(project_dir) {
 #' Open a folder in the file explorer (desktop use only)
 #' @noRd
 open_folder <- function(path) {
+  if (ck_is_server()) {
+    return(invisible(NULL))
+  }
   if (.Platform$OS.type == "windows") {
     shell.exec(normalizePath(path))
   } else {

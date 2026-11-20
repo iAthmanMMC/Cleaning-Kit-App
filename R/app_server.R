@@ -4,16 +4,22 @@
 #' @noRd
 app_server <- function(input, output, session, project_dir = NULL) {
   store <- new_store()
+  hosted <- ck_is_server()
 
-  mod_project_server("project", store, initial_dir = project_dir)
+  mod_project_server(
+    "project",
+    store,
+    initial_dir = project_dir,
+    hosted = hosted
+  )
   mod_tool_server("tool", store)
   mod_data_server("data", store)
   mod_checks_server("checks", store)
   mod_results_server("results", store)
-  mod_review_server("review", store)
+  mod_review_server("review", store, hosted = hosted)
   mod_import_server("import", store)
   mod_apply_server("apply", store)
-  mod_final_server("final", store)
+  mod_final_server("final", store, hosted = hosted)
   mod_runlog_server("runlog", store)
 
   output$status <- shiny::renderUI({
@@ -50,7 +56,13 @@ workflow_status <- function(store) {
     list(
       label = "Project",
       state = if (missing) "warn" else "done",
-      detail = if (missing) "Folders not set up" else basename(dir)
+      detail = if (missing) {
+        "Folders not set up"
+      } else if (ck_is_server()) {
+        "Online workspace"
+      } else {
+        basename(dir)
+      }
     )
   }
 
