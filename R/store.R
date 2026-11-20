@@ -11,6 +11,9 @@
 #' | `raw_data`, `raw_data_path`, `filter_summary` | Data |
 #' | `check_results`, `logs`, `other_responses`, `combined_log` | Checks |
 #' | `review_path` | Review workbook |
+#' | `reviewed_checks`, `reviewed_log`, `evaluation` | Import reviewed |
+#' | `clean_result` | Apply |
+#' | `final_check`, `final_path` | Final output |
 #' | `log` | every step, through `run_step()` |
 #'
 #' @noRd
@@ -33,6 +36,12 @@ new_store <- function() {
     other_responses = NULL,
     combined_log = NULL,
     review_path = NULL,
+    reviewed_checks = NULL,
+    reviewed_log = NULL,
+    evaluation = NULL,
+    clean_result = NULL,
+    final_check = NULL,
+    final_path = NULL,
     log = empty_log()
   )
 }
@@ -49,7 +58,10 @@ new_store <- function() {
   ),
   data = c("raw_data", "raw_data_path", "filter_summary"),
   checks = c("check_results", "logs", "other_responses", "combined_log"),
-  review = "review_path"
+  review = "review_path",
+  import = c("reviewed_checks", "reviewed_log", "evaluation"),
+  apply = "clean_result",
+  final = c("final_check", "final_path")
 )
 
 #' Clear what a step and every later step produced

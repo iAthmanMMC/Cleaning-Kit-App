@@ -1,9 +1,7 @@
 #' App UI
 #'
-#' The navbar follows the two halves of the cleaningkit workflow. Validate
-#' holds the steps of example script 1 built so far; the remaining steps
-#' (checks, review workbook, and the Clean half) are added in later
-#' milestones, see PLAN.md.
+#' The navbar follows the two halves of the cleaningkit workflow: Validate
+#' holds the steps of example script 1, Clean those of example script 2.
 #'
 #' @param request Needed for bookmarking; unused.
 #' @noRd
@@ -61,6 +59,28 @@ app_ui <- function(request) {
         value = "review",
         icon = shiny::icon("file-excel"),
         mod_review_ui("review")
+      )
+    ),
+    bslib::nav_menu(
+      "Clean",
+      icon = shiny::icon("broom"),
+      bslib::nav_panel(
+        "6. Import reviewed",
+        value = "import",
+        icon = shiny::icon("file-import"),
+        mod_import_ui("import")
+      ),
+      bslib::nav_panel(
+        "7. Apply",
+        value = "apply",
+        icon = shiny::icon("wand-magic-sparkles"),
+        mod_apply_ui("apply")
+      ),
+      bslib::nav_panel(
+        "8. Final output",
+        value = "final",
+        icon = shiny::icon("file-export"),
+        mod_final_ui("final")
       )
     ),
     bslib::nav_spacer(),

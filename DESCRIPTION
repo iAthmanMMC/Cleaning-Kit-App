@@ -13,7 +13,7 @@ Depends:
     R (>= 4.1.0)
 Imports:
     bslib (>= 0.6.0),
-    cleaningkit,
+    cleaningkit (>= 2026.08.0),
     DT,
     htmltools,
     openxlsx,

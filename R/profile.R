@@ -46,6 +46,63 @@ default_profile <- function() {
       color_columns = "old_value",
       group_by = "issue",
       file_suffix = "_follow-ups"
+    ),
+    # the Clean half: script 2
+    clean = list(
+      file_pattern = "_follow-ups_edited\\.xls[xm]$",
+      log_uuid_col = "Survey UUID",
+      log_action_col = "Action taken",
+      log_question_col = "Question number",
+      log_old_value_col = "Old value",
+      log_new_value_col = "New value",
+      other_uuid_col = "uuid",
+      valid_actions = c(
+        "recoded",
+        "delete_data_point",
+        "addition",
+        "discard",
+        "other",
+        "no_action"
+      ),
+      change_response_values = c("recoded", "addition", "other"),
+      blank_response_values = "delete_data_point",
+      remove_survey_values = "discard",
+      no_action_values = "no_action",
+      default_blank_action = "no_action",
+      apply_repeated_entries = TRUE,
+      restore_types = TRUE,
+      apply_other = TRUE,
+      label_true_other = "Translation or correction of a genuine other response",
+      label_recode = "Other response recoded to an existing choice",
+      label_remove = "Invalid other response, value removed",
+      columns_to_skip = c(
+        "start",
+        "end",
+        "today",
+        "deviceid",
+        "uuid",
+        "_uuid",
+        "id",
+        "_id",
+        "submission_time",
+        "_submission_time",
+        "index",
+        "_index",
+        "df_name",
+        "username",
+        "simserial",
+        "phonenumber",
+        "check_binding",
+        "evaluation_issue",
+        "_location_altitude"
+      )
+    ),
+    final = list(
+      file_suffix = "_4Mi_final_output",
+      project_name = "",
+      data_collection_round = "",
+      prepared_by = "",
+      project_description = ""
     )
   )
 }
@@ -56,7 +113,13 @@ default_profile <- function() {
   "other_text_types",
   "extra_date_cols",
   "extra_datetime_cols",
-  "color_columns"
+  "color_columns",
+  "valid_actions",
+  "change_response_values",
+  "blank_response_values",
+  "remove_survey_values",
+  "no_action_values",
+  "columns_to_skip"
 )
 
 #' Where the profile lives inside a project

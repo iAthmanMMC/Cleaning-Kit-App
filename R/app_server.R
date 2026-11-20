@@ -11,6 +11,9 @@ app_server <- function(input, output, session, project_dir = NULL) {
   mod_checks_server("checks", store)
   mod_results_server("results", store)
   mod_review_server("review", store)
+  mod_import_server("import", store)
+  mod_apply_server("apply", store)
+  mod_final_server("final", store)
   mod_runlog_server("runlog", store)
 
   output$status <- shiny::renderUI({
@@ -94,7 +97,54 @@ workflow_status <- function(store) {
         detail = basename(store$review_path)
       )
     },
-    list(label = "Clean", state = "todo", detail = "Coming in M3")
+    import_status(store$reviewed_log, store$evaluation),
+    if (is.null(store$clean_result)) {
+      list(label = "Apply", state = "todo", detail = NULL)
+    } else {
+      list(
+        label = "Apply",
+        state = "done",
+        detail = paste0(
+          store$clean_result$n_after,
+          " of ",
+          store$clean_result$n_before,
+          " records kept"
+        )
+      )
+    },
+    if (is.null(store$final_path)) {
+      list(label = "Final output", state = "todo", detail = NULL)
+    } else {
+      list(
+        label = "Final output",
+        state = "done",
+        detail = basename(store$final_path)
+      )
+    }
+  )
+}
+
+#' Progress-sidebar entry for the reviewed logs
+#' @noRd
+import_status <- function(reviewed_log, evaluation) {
+  if (is.null(reviewed_log)) {
+    return(list(label = "Import reviewed", state = "todo", detail = NULL))
+  }
+  counts <- evaluation_counts(evaluation)
+  list(
+    label = "Import reviewed",
+    state = if (counts$blocking > 0) {
+      "error"
+    } else if (counts$warnings > 0) {
+      "warn"
+    } else {
+      "done"
+    },
+    detail = paste0(
+      nrow(reviewed_log),
+      " log rows",
+      if (counts$blocking > 0) paste0(", ", counts$blocking, " to fix")
+    )
   )
 }
 
