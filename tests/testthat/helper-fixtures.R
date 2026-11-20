@@ -120,9 +120,15 @@ fixture_export <- function(n = 10, start_id = 1, duplicate_uuid = FALSE) {
     Q13 = ifelse(ids %% 4 == 0, "Other", "Kenya"),
     Q13_1 = ifelse(ids %% 4 == 0, "Somaliland", NA),
     Q20 = "Yes",
-    Q21 = as.character(ids %% 5),
+    # one outlier: survey 7 says 40 people travel with them
+    Q21 = ifelse(ids == 7, "40", as.character(ids %% 5)),
     Q30 = "Work",
-    Q30_1 = NA,
+    Q30_1 = ifelse(ids == 3, "Smugglers", NA),
+    # survey 5 is interviewed in their own country
+    Q31 = ifelse(ids == 5, "Kenya", "Somalia"),
+    Q41 = "Somalia",
+    # survey 6 took 5 minutes, the rest 40
+    `_duration` = ifelse(ids == 6, "300", "2400"),
     `_uuid` = sprintf("uuid-%04d", ids),
     check.names = FALSE,
     stringsAsFactors = FALSE

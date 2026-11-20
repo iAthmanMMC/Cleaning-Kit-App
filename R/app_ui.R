@@ -43,6 +43,24 @@ app_ui <- function(request) {
         value = "data",
         icon = shiny::icon("table"),
         mod_data_ui("data")
+      ),
+      bslib::nav_panel(
+        "3. Checks",
+        value = "checks",
+        icon = shiny::icon("list-check"),
+        mod_checks_ui("checks")
+      ),
+      bslib::nav_panel(
+        "4. Results",
+        value = "results",
+        icon = shiny::icon("chart-column"),
+        mod_results_ui("results")
+      ),
+      bslib::nav_panel(
+        "5. Review workbook",
+        value = "review",
+        icon = shiny::icon("file-excel"),
+        mod_review_ui("review")
       )
     ),
     bslib::nav_spacer(),

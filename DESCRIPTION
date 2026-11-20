@@ -16,6 +16,7 @@ Imports:
     cleaningkit,
     DT,
     htmltools,
+    openxlsx,
     readxl,
     shiny (>= 1.8.0),
     shinyFiles,
@@ -24,7 +25,6 @@ Imports:
     withr,
     yaml
 Suggests:
-    openxlsx,
     pkgload,
     testthat (>= 3.0.0)
 Remotes:

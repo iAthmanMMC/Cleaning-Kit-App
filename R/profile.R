@@ -34,9 +34,30 @@ default_profile <- function() {
       sheet = 1L,
       extra_date_cols = character(0),
       extra_datetime_cols = character(0)
+    ),
+    # one entry per check in ck_checks(): list(enabled, args)
+    checks = default_check_settings(),
+    review = list(
+      vba = TRUE,
+      include_dataset = TRUE,
+      flag_columns = TRUE,
+      include_other = TRUE,
+      color_mode = "partial",
+      color_columns = "old_value",
+      group_by = "issue",
+      file_suffix = "_follow-ups"
     )
   )
 }
+
+#' Settings that hold several values, even when their default has one
+#' @noRd
+.vector_settings <- c(
+  "other_text_types",
+  "extra_date_cols",
+  "extra_datetime_cols",
+  "color_columns"
+)
 
 #' Where the profile lives inside a project
 #' @noRd
@@ -82,18 +103,27 @@ write_profile <- function(profile, project_dir) {
 #' @noRd
 normalise_profile <- function(profile) {
   defaults <- default_profile()
-  for (section in setdiff(names(defaults), "profile_version")) {
+  for (section in setdiff(names(defaults), c("profile_version", "checks"))) {
     for (key in names(defaults[[section]])) {
       value <- profile[[section]][[key]]
       default <- defaults[[section]][[key]]
-      profile[[section]][[key]] <- coerce_like(value, default)
+      profile[[section]][[key]] <- coerce_like(
+        value,
+        default,
+        vector = key %in% .vector_settings
+      )
     }
   }
+  # the check settings follow the registry, see merge_check_settings()
+  profile$checks <- merge_check_settings(profile$checks)
   profile
 }
 
 #' @noRd
-coerce_like <- function(value, default) {
+coerce_like <- function(value, default, vector = FALSE) {
+  if (vector) {
+    return(if (is.null(value)) character(0) else as.character(unlist(value)))
+  }
   if (is.null(value) || length(value) == 0) {
     if (is.character(default)) {
       return(if (length(default) == 0) character(0) else default)

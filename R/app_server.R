@@ -8,6 +8,9 @@ app_server <- function(input, output, session, project_dir = NULL) {
   mod_project_server("project", store, initial_dir = project_dir)
   mod_tool_server("tool", store)
   mod_data_server("data", store)
+  mod_checks_server("checks", store)
+  mod_results_server("results", store)
+  mod_review_server("review", store)
   mod_runlog_server("runlog", store)
 
   output$status <- shiny::renderUI({
@@ -81,8 +84,39 @@ workflow_status <- function(store) {
     project,
     tool,
     data,
-    list(label = "Checks", state = "todo", detail = "Coming in M2"),
-    list(label = "Review workbook", state = "todo", detail = "Coming in M2"),
+    checks_status(store$check_results),
+    if (is.null(store$review_path)) {
+      list(label = "Review workbook", state = "todo", detail = NULL)
+    } else {
+      list(
+        label = "Review workbook",
+        state = "done",
+        detail = basename(store$review_path)
+      )
+    },
     list(label = "Clean", state = "todo", detail = "Coming in M3")
+  )
+}
+
+#' Progress-sidebar entry for the checks
+#' @noRd
+checks_status <- function(results) {
+  if (length(results) == 0) {
+    return(list(label = "Checks", state = "todo", detail = NULL))
+  }
+  failed <- sum(vapply(results, function(r) r$status == "error", logical(1)))
+  flags <- sum(vapply(
+    results,
+    function(r) if (r$status == "done" && r$kind == "log") r$n else 0L,
+    integer(1)
+  ))
+  list(
+    label = "Checks",
+    state = if (failed > 0) "warn" else "done",
+    detail = paste0(
+      flags,
+      " flags",
+      if (failed > 0) paste0(", ", failed, " check(s) failed")
+    )
   )
 }

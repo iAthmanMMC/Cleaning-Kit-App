@@ -299,6 +299,8 @@ mod_data_server <- function(id, store) {
       )
       refresh(refresh() + 1)
       shiny::req(res)
+      # results of the checks belong to the previous data
+      reset_from(store, "checks")
       store$raw_data <- res$raw_data
       store$raw_data_path <- res$path
       store$filter_summary <- res$filter_summary

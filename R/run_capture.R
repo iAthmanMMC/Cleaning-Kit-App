@@ -96,9 +96,21 @@ strip_ansi <- function(x) {
 #'
 #' @param store The session store from `new_store()`.
 #' @inheritParams capture_run
-#' @return The value of `fun`, or `NULL` if it failed.
+#' @param notify Pop up errors and warnings. Turn off when the caller runs
+#'   several steps and reports them together.
+#' @param full Return the whole `capture_run()` result instead of the value,
+#'   for callers that need the error message.
+#' @return The value of `fun`, or `NULL` if it failed; the full result when
+#'   `full = TRUE`.
 #' @noRd
-run_step <- function(store, fun, step, dir = NULL) {
+run_step <- function(
+  store,
+  fun,
+  step,
+  dir = NULL,
+  notify = TRUE,
+  full = FALSE
+) {
   res <- shiny::withProgress(
     message = paste0(step, "..."),
     value = 0.3,
@@ -107,7 +119,9 @@ run_step <- function(store, fun, step, dir = NULL) {
   store$log <- rbind(store$log, res$log)
 
   n_warn <- sum(res$log$level == "warning")
-  if (!is.null(res$error)) {
+  if (!notify) {
+    # reported by the caller
+  } else if (!is.null(res$error)) {
     shiny::showNotification(
       paste0(step, " failed: ", res$error),
       type = "error",
@@ -125,5 +139,5 @@ run_step <- function(store, fun, step, dir = NULL) {
       duration = 8
     )
   }
-  res$value
+  if (full) res else res$value
 }

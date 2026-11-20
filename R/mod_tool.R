@@ -214,9 +214,9 @@ mod_tool_server <- function(id, store) {
       for (slot in names(res)) {
         store[[slot]] <- res[[slot]]
       }
-      # the data was read against the old tool's date columns
-      store$raw_data <- NULL
-      store$raw_data_path <- NULL
+      # the data was read against the old tool's date columns, and the
+      # checks ran on that data
+      reset_from(store, "data")
       shiny::updateSelectizeInput(
         session,
         "other_text_types",
