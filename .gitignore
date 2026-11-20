@@ -2,3 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# survey data is personal data: never commit exports, logs or test projects
+Claude outputs/
+*.xlsx
+*.xlsm
+*.csv

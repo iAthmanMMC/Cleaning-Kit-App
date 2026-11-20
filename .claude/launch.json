@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cleaningkitapp",
+      "runtimeExecutable": "C:/Program Files/R/R-4.6.1/bin/Rscript.exe",
+      "runtimeArgs": [
+        "-e",
+        "pkgload::load_all(quiet = TRUE); run_app(launch.browser = FALSE, port = 7451)"
+      ],
+      "port": 7451
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+Package: cleaningkitapp
+Title: Point-and-Click Interface for 4Mi Data Cleaning with cleaningkit
+Version: 2026.11.0
+Authors@R:
+    person("Abubakar", "Athman", , "abubakar.athman@mixedmigration.org", role = c("aut", "cre"))
+Description: A Shiny application over the cleaningkit package. It walks a
+    data officer through a 4Mi validation round - project folders, the
+    XLSForm, the raw export - without editing the example scripts, and keeps
+    every setting in a project profile so the next round starts where the
+    last one ended.
+License: MIT + file LICENSE
+Depends:
+    R (>= 4.1.0)
+Imports:
+    bslib (>= 0.6.0),
+    cleaningkit,
+    DT,
+    htmltools,
+    readxl,
+    shiny (>= 1.8.0),
+    shinyFiles,
+    stats,
+    utils,
+    withr,
+    yaml
+Suggests:
+    openxlsx,
+    pkgload,
+    testthat (>= 3.0.0)
+Remotes:
+    github::mixedmigrationcentre/cleaningkit
+Config/testthat/edition: 3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.0
