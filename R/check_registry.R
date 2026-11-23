@@ -387,8 +387,24 @@ ck_checks <- function() {
           "columns",
           "Extra columns shown next to each response",
           default = "username"
+        ),
+        # Off unless the user picks otherwise; see translate_helpers.R.
+        translate = arg_spec(
+          "choice",
+          "Translate the responses into English",
+          help = translate_hint(),
+          default = "off",
+          choices = translate_choices()
+        ),
+        # Shown as a toggle; build_other_responses() turns it into the
+        # ck_translate_options() list prepare_other_responses() expects.
+        translate_options = arg_spec(
+          "toggle",
+          "Hide long numbers (phone numbers, IDs) before sending",
+          default = TRUE
         )
-      )
+      ),
+      build = build_other_responses
     )
   )
 }

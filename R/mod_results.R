@@ -50,7 +50,11 @@ mod_results_ui <- function(id) {
           DT::DTOutput(ns("enumerators"))
         )
       ),
-      bslib::nav_panel("\"Other\" responses", DT::DTOutput(ns("other")))
+      bslib::nav_panel(
+        "\"Other\" responses",
+        shiny::uiOutput(ns("translation")),
+        DT::DTOutput(ns("other"))
+      )
     )
   )
 }
@@ -160,6 +164,25 @@ mod_results_server <- function(id, store) {
     output$other <- DT::renderDT({
       shiny::req(store$other_responses)
       dt_table(store$other_responses, page_length = 25)
+    })
+
+    output$translation <- shiny::renderUI({
+      shiny::req(store$other_responses)
+      preview <- translation_preview(store$other_responses)
+      if (!is.null(preview)) {
+        return(translation_preview_box(
+          preview,
+          DT::DTOutput(session$ns("translation_preview"))
+        ))
+      }
+      setting <- store$profile$checks$other_responses$args$translate
+      if (identical(setting, "send")) translation_sent_note()
+    })
+
+    output$translation_preview <- DT::renderDT({
+      preview <- translation_preview(store$other_responses)
+      shiny::req(preview, nrow(preview) > 0)
+      dt_table(preview, page_length = 10)
     })
   })
 }

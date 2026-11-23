@@ -453,7 +453,7 @@
       "description": {
         "Package": "cleaningkit",
         "Title": "What the Package Does (One Line, Title Case)",
-        "Version": "2026.11.2",
+        "Version": "2026.11.3",
         "Authors@R": "\n    person(\"Abubakar\", \"Athman\", , \"abubakar.athman@mixedmigration.org\", role = c(\"aut\", \"cre\"))",
         "Description": "This package offers an automated toolkit for streamlining 4Mi\n    survey data cleaning and validation, enforcing protocols on data\n    quality, sampling, and enumerator performance. It provides a\n    standardized approach to checking interview consistency, identifying\n    outliers, \"other\" text responses, and detecting potential fraud based\n    on official SOPs.",
         "License": "MIT + file LICENSE",
@@ -472,16 +472,16 @@
         "RemoteUsername": "mixedmigrationcentre",
         "RemotePkgRef": "mixedmigrationcentre/cleaningkit",
         "RemoteRef": "HEAD",
-        "RemoteSha": "a92748a3c6411bf0fec298e5272ef1bf68384950",
+        "RemoteSha": "5465b4dacdcd5e7a9c075edec1ff9106ced6a84a",
         "GithubRepo": "cleaningkit",
         "GithubUsername": "mixedmigrationcentre",
         "GithubRef": "HEAD",
-        "GithubSHA1": "a92748a3c6411bf0fec298e5272ef1bf68384950",
+        "GithubSHA1": "5465b4dacdcd5e7a9c075edec1ff9106ced6a84a",
         "NeedsCompilation": "no",
-        "Packaged": "2026-11-23 08:19:51 UTC; CD538",
+        "Packaged": "2026-11-23 11:59:45 UTC; CD538",
         "Author": "Abubakar Athman [aut, cre]",
         "Maintainer": "Abubakar Athman <abubakar.athman@mixedmigration.org>",
-        "Built": "R 4.6.1; ; 2026-11-23 08:19:52 UTC; windows"
+        "Built": "R 4.6.1; ; 2026-11-23 11:59:47 UTC; windows"
       }
     },
     "cli": {
@@ -3100,7 +3100,7 @@
       "checksum": "4d745ecebcf091ec34909dae99075d5e"
     },
     "DESCRIPTION": {
-      "checksum": "780e2301b00b2492e79eecda12a2385a"
+      "checksum": "5256f267ccfb582b7dcdcc76bcd74295"
     },
     "LICENSE": {
       "checksum": "2a3505369b9fff2c945721426a96dc7c"
@@ -3121,7 +3121,7 @@
       "checksum": "e113658bfd0d5153a942f96d80699058"
     },
     "R/check_registry.R": {
-      "checksum": "980eef58d7a90f8b45a442bd0464cd50"
+      "checksum": "f13f78a2f633365d453dff15286d7c1e"
     },
     "R/clean_helpers.R": {
       "checksum": "1fcd356d2013c9c8215a642497da0efb"
@@ -3145,7 +3145,7 @@
       "checksum": "b61515bd3cd06740b6b85fd2a976e4b3"
     },
     "R/mod_check_flow.R": {
-      "checksum": "2edb89f2cd64bef098d09d71dad61ef5"
+      "checksum": "566560aab1990950d8e45681d5f6f745"
     },
     "R/mod_checks.R": {
       "checksum": "992497a50fa50e9d3b017d9a795b6751"
@@ -3163,7 +3163,7 @@
       "checksum": "d86d1ff57cd838b4f48a29ec9a2abcb2"
     },
     "R/mod_results.R": {
-      "checksum": "6830b2e42e023b9ad98e75ace19ebfe7"
+      "checksum": "284e33739415ccb45fb1dea1b3022ec4"
     },
     "R/mod_review.R": {
       "checksum": "e965ba5c434e659fb3a4388e0d3762bd"
@@ -3203,6 +3203,9 @@
     },
     "R/tool_helpers.R": {
       "checksum": "48cb6b5fffc2ec24fd6a55b87936b205"
+    },
+    "R/translate_helpers.R": {
+      "checksum": "1dc2f0eab8a61b12d227f14248c89794"
     }
   },
   "users": null

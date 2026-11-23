@@ -74,9 +74,12 @@ local_reviewed_project <- function(edit = NULL, env = parent.frame()) {
   if (!is.null(edit)) {
     cl <- edit(cl)
   }
-  oth[[8]][oth$uuid == "uuid-0004"] <- "Somaliland region"
-  oth[[9]][oth$uuid == "uuid-0008"] <- "Somalia"
-  oth[[10]][oth$uuid == "uuid-0012"] <- "Yes"
+  # review columns by header, not position: columns such as `translation`
+  # can be added before them
+  col <- function(pattern) grep(pattern, names(oth), ignore.case = TRUE)[1]
+  oth[[col("^input translation")]][oth$uuid == "uuid-0004"] <- "Somaliland region"
+  oth[[col("^correct to existing")]][oth$uuid == "uuid-0008"] <- "Somalia"
+  oth[[col("^invalid other")]][oth$uuid == "uuid-0012"] <- "Yes"
 
   openxlsx::write.xlsx(
     list(cleaning_log = cl, other_responses = oth),
