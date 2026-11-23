@@ -241,12 +241,16 @@ mod_check_flow_server <- function(id) {
         htmltools::p(
           class = "mb-0 small",
           "Survey ID column: ",
-          htmltools::code(g$uuid_column),
+          htmltools::tags$code(g$uuid_column, .noWS = "outside"),
           ". Enumerator column: ",
-          htmltools::code(r$profile$general$enumerator_column),
-          ". Row 2 holds labels: ",
-          if (isTRUE(r$profile$general$skip_label_row)) "yes" else "no",
-          "."
+          htmltools::tags$code(
+            r$profile$general$enumerator_column,
+            .noWS = "outside"
+          ),
+          paste0(
+            ". Row 2 holds labels: ",
+            if (isTRUE(r$profile$general$skip_label_row)) "yes." else "no."
+          )
         ),
         if (length(missing)) {
           htmltools::p(

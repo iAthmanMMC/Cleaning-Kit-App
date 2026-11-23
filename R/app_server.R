@@ -10,20 +10,21 @@ app_server <- function(input, output, session, project_dir = NULL) {
     bslib::nav_select("nav", value, session = session)
   })
   mod_check_flow_server("check_flow")
-  mod_project_server(
-    "project",
-    store,
-    initial_dir = project_dir,
-    hosted = hosted
-  )
+  mod_apply_flow_server("apply_flow")
+
+  # online the app is upload-only: the folder screens are not built
+  if (hosted) {
+    return(invisible(NULL))
+  }
+  mod_project_server("project", store, initial_dir = project_dir)
   mod_tool_server("tool", store)
   mod_data_server("data", store)
   mod_checks_server("checks", store)
   mod_results_server("results", store)
-  mod_review_server("review", store, hosted = hosted)
+  mod_review_server("review", store)
   mod_import_server("import", store)
   mod_apply_server("apply", store)
-  mod_final_server("final", store, hosted = hosted)
+  mod_final_server("final", store)
   mod_runlog_server("runlog", store)
 
   output$status <- shiny::renderUI({
