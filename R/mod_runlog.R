@@ -4,15 +4,17 @@
 #' session and downloadable, so a data officer can see why a step flagged or
 #' dropped something.
 #'
+#' @param compact `TRUE` for the "Show details" fold of the upload screens:
+#'   no minimum height and no title.
 #' @noRd
-mod_runlog_ui <- function(id) {
+mod_runlog_ui <- function(id, compact = FALSE) {
   ns <- shiny::NS(id)
   bslib::card(
     full_screen = TRUE,
-    min_height = "70vh",
+    min_height = if (!compact) "70vh",
     bslib::card_header(
       class = "d-flex justify-content-between align-items-center",
-      "Run log",
+      if (compact) "What the app did, step by step" else "Run log",
       htmltools::div(
         class = "d-flex gap-2",
         shiny::checkboxGroupInput(
