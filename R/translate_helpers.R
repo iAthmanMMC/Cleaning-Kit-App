@@ -6,9 +6,12 @@
 # would be sent without sending anything. Only the distinct "other" texts are
 # sent: no survey ID, enumerator or any other column.
 #
-# The app offers the same three settings in two places: the "Other" text
-# responses panel of the Checks screen (through the registry) and a switch on
-# the "Check new data" screen. Both use the helpers below.
+# The "Other" text responses panel of the Checks screen offers all three
+# settings through the registry. The "Check new data" screen offers only Off
+# and Translate for the run, and a separate "Preview the texts" button that
+# runs the other-responses step alone: a preview should not need every check
+# to run, and a button does not leave the screen in a mode the run has to be
+# switched back out of.
 
 #' The three translation settings, labelled for the user
 #' @noRd
@@ -18,6 +21,14 @@ translate_choices <- function() {
     "Preview - show what would be sent, send nothing" = "preview",
     "Translate - send the texts to Google Translate" = "send"
   )
+}
+
+#' The settings offered for a run on the "Check new data" screen
+#'
+#' The preview has its own button there, so it is not one of them.
+#' @noRd
+translate_run_choices <- function() {
+  translate_choices()[c(1, 3)]
 }
 
 #' One-paragraph explanation shown under the setting
@@ -82,8 +93,13 @@ translation_preview <- function(other_responses) {
 #'
 #' @param preview Data frame from `translation_preview()`.
 #' @param table_output A `DT::DTOutput()` for the texts.
+#' @param next_step What to do if the list is acceptable, as a sentence.
 #' @noRd
-translation_preview_box <- function(preview, table_output) {
+translation_preview_box <- function(
+  preview,
+  table_output,
+  next_step = "If that is acceptable, choose \"Translate\" and run the checks again."
+) {
   n <- nrow(preview)
   htmltools::div(
     class = "alert alert-info mt-3",
@@ -99,8 +115,8 @@ translation_preview_box <- function(preview, table_output) {
         paste0(
           n,
           " distinct text(s) would be sent to Google Translate, exactly as ",
-          "listed below (long numbers already hidden as #####). If that is ",
-          "acceptable, choose \"Translate\" and run the checks again."
+          "listed below (long numbers already hidden as #####). ",
+          next_step
         )
       }
     ),

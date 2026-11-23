@@ -159,6 +159,8 @@ mod_check_flow_server <- function(id) {
     round <- shiny::reactiveVal(NULL)
     outcome <- shiny::reactiveVal(NULL)
     problem <- shiny::reactiveVal(NULL)
+    # result of the "Preview the texts" button: list(preview =) or list(error =)
+    translation_check <- shiny::reactiveVal(NULL)
     # the session's temporary folder; an environment so observers can replace it
     ws <- new.env()
     ws$dir <- NULL
@@ -219,6 +221,7 @@ mod_check_flow_server <- function(id) {
       round(NULL)
       outcome(NULL)
       problem(NULL)
+      translation_check(NULL)
 
       download <- input$download
       previous <- if (next_round) input$previous
@@ -357,16 +360,28 @@ mod_check_flow_server <- function(id) {
           ),
           # On the page rather than in a fold, so nobody sends texts without
           # seeing the choice. Starts at "off" every round; the choice is not
-          # kept in the workbook.
+          # kept in the workbook. The preview is a button of its own: it runs
+          # only the "other" responses, sends nothing, and leaves the choice
+          # and the run button as they are.
           htmltools::div(
             class = "border rounded p-3 mb-3",
             shiny::radioButtons(
               ns("translate"),
               "Translate the \"other\" responses into English?",
-              choices = translate_choices(),
+              choices = translate_run_choices(),
               selected = shiny::isolate(input$translate) %||% "off"
             ),
-            htmltools::p(class = "ck-hint mb-0", translate_hint())
+            htmltools::p(class = "ck-hint", translate_hint()),
+            shiny::actionButton(
+              ns("preview_translation"),
+              "Preview the texts that would be sent",
+              class = "btn-sm btn-outline-primary",
+              icon = shiny::icon("eye")
+            ),
+            htmltools::span(
+              class = "ck-hint ms-2",
+              "Sends nothing and doesn't run the checks."
+            )
           ),
           shiny::actionButton(
             ns("run"),
@@ -423,12 +438,52 @@ mod_check_flow_server <- function(id) {
         )
       }
       out$translate <- translate
+      # the results take over from an earlier preview
+      translation_check(NULL)
       outcome(out)
     })
 
+    # "Preview the texts": the other-responses step alone, in preview mode
+    shiny::observeEvent(input$preview_translation, {
+      r <- round()
+      shiny::req(r)
+      args <- r$profile$checks$other_responses$args %||%
+        default_check_settings(checks)$other_responses$args
+      args$translate <- "preview"
+      ctx <- check_context(
+        raw_data = r$raw_data,
+        tool_survey = r$tool$tool_survey,
+        tool_choices = r$tool$tool_choices,
+        other_db = r$tool$other_db,
+        general = r$profile$general,
+        project_dir = ws$dir
+      )
+      res <- run_step(
+        store,
+        function() run_check(checks$other_responses, args, ctx),
+        step = "Preview the translation",
+        dir = ws$dir,
+        notify = FALSE,
+        full = TRUE
+      )
+      translation_check(
+        if (is.null(res$error)) {
+          list(preview = translation_preview(res$value))
+        } else {
+          list(error = res$error)
+        }
+      )
+    })
+
     output$translation_card <- shiny::renderUI({
-      out <- outcome()
-      preview <- if (!is.null(out)) translation_preview(out$other_responses)
+      tc <- translation_check()
+      if (is.null(tc)) {
+        return(NULL)
+      }
+      if (!is.null(tc$error)) {
+        return(problem_box(tc$error))
+      }
+      preview <- tc$preview
       if (is.null(preview)) {
         return(NULL)
       }
@@ -439,7 +494,11 @@ mod_check_flow_server <- function(id) {
         bslib::card_body(
           translation_preview_box(
             preview,
-            DT::DTOutput(session$ns("translation_preview"))
+            DT::DTOutput(session$ns("translation_preview")),
+            next_step = paste(
+              "If that is acceptable, choose \"Translate\" above and run the",
+              "checks. If not, leave it on \"Off\"."
+            )
           )
         )
       )
@@ -520,9 +579,7 @@ mod_check_flow_server <- function(id) {
     })
 
     output$translation_preview <- DT::renderDT({
-      out <- outcome()
-      shiny::req(out)
-      preview <- translation_preview(out$other_responses)
+      preview <- translation_check()$preview
       shiny::req(preview, nrow(preview) > 0)
       dt_table(preview, page_length = 10)
     })
