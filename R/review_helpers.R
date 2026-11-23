@@ -32,6 +32,8 @@ default_review_stem <- function(suffix = "_follow-ups", date = Sys.Date()) {
 #' @param general The `general` section of the profile.
 #' @param other_responses,other_db Leave `NULL` to leave the other-responses
 #'   sheets out.
+#' @param round_info Round memory from `make_round_info()`, written into the
+#'   workbook's hidden sheets; `NULL` writes none.
 #' @return `output_path`, invisibly.
 #' @noRd
 build_review_workbook <- function(
@@ -40,7 +42,8 @@ build_review_workbook <- function(
   review,
   general,
   other_responses = NULL,
-  other_db = NULL
+  other_db = NULL,
+  round_info = NULL
 ) {
   if (is.null(combined_log)) {
     stop("Run the checks first: there is no cleaning log yet.")
@@ -67,7 +70,8 @@ build_review_workbook <- function(
     group_by = group_by,
     other_enumerator_id = if (include_other) general$enumerator_column,
     skip_label_row = general$skip_label_row,
-    vba = isTRUE(review$vba)
+    vba = isTRUE(review$vba),
+    round_info = round_info
   )
   if (!file.exists(output_path)) {
     stop("The workbook was not written to ", output_path)
