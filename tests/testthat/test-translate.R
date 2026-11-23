@@ -76,3 +76,36 @@ test_that("the preview box says nothing was sent", {
   ))
   expect_match(empty, "nothing new to translate")
 })
+
+test_that("the run offers Off and Translate; the preview has its own button", {
+  expect_identical(unname(translate_run_choices()), c("off", "send"))
+})
+
+test_that("'Preview the texts' runs only the other responses and sends nothing", {
+  src <- withr::local_tempdir()
+  write_fixture_export(file.path(src, "ona.xlsx"), n = 12)
+  write_fixture_tool(file.path(src, "form.xlsx"))
+
+  shiny::testServer(mod_check_flow_server, {
+    session$setInputs(
+      first = "first",
+      download = as_upload(src, "ona.xlsx"),
+      xlsform = as_upload(src, "form.xlsx"),
+      start = 1
+    )
+    expect_false(is.null(round()))
+
+    session$setInputs(preview_translation = 1)
+    preview <- translation_check()$preview
+    expect_s3_class(preview, "data.frame")
+    expect_gt(nrow(preview), 0)
+    # no check ran, so there are no results yet
+    expect_null(outcome())
+
+    # running the checks replaces the preview with the results
+    session$setInputs(checks = "other_responses", translate = "off", run = 1)
+    expect_null(translation_check())
+    expect_false(is.null(outcome()))
+    expect_true(all(is.na(outcome()$other_responses$translation)))
+  })
+})
