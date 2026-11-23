@@ -60,6 +60,6 @@ mod_start_ui <- function(id) {
 mod_start_server <- function(id, go) {
   shiny::moduleServer(id, function(input, output, session) {
     shiny::observeEvent(input$check, go("check_flow"))
-    shiny::observeEvent(input$apply, go("import"))
+    shiny::observeEvent(input$apply, go("apply_flow"))
   })
 }

@@ -1,30 +1,6 @@
 # The "Check new data" flow without Shiny: detection, starting a round from
 # uploaded files, and the round memory written into the review workbook.
 
-# A fileInput() value for files in `dir`.
-as_upload <- function(dir, files) {
-  data.frame(
-    name = files,
-    size = file.size(file.path(dir, files)),
-    type = "",
-    datapath = file.path(dir, files),
-    stringsAsFactors = FALSE
-  )
-}
-
-# Start a round quietly, in `dir`.
-quiet_round <- function(dir, ...) {
-  res <- capture_run(
-    function() start_round(..., dir = dir),
-    step = "test",
-    dir = dir
-  )
-  if (!is.null(res$error)) {
-    stop(res$error)
-  }
-  res$value
-}
-
 test_that("the label row is detected from the survey ID column", {
   df <- fixture_export(n = 4)
   expect_true(detect_label_row(df, "_uuid"))

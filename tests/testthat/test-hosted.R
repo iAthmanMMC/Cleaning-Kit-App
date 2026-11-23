@@ -140,7 +140,6 @@ test_that("hosted, the app has no folder picker or Show in folder button", {
   withr::local_options(cleaningkitapp.server = TRUE)
   html <- as.character(app_ui(NULL))
   expect_false(grepl("project-browse", html, fixed = TRUE))
-  expect_true(grepl("project-download_workspace", html, fixed = TRUE))
 
   withr::local_options(cleaningkitapp.server = FALSE)
   expect_true(grepl("project-browse", as.character(app_ui(NULL)), fixed = TRUE))

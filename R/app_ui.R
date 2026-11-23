@@ -1,29 +1,16 @@
 #' App UI
 #'
-#' Start opens on two plain choices. "Check new data" is the upload-only
-#' flow; the Project, Validate and Clean tabs keep the step-by-step folder
-#' workflow of the example scripts (Validate is script 1, Clean script 2).
+#' Start opens on two plain choices, each an upload-and-download flow:
+#' "Check new data" and "Apply corrections". Run locally, the Project,
+#' Validate and Clean tabs also keep the step-by-step folder workflow of the
+#' example scripts (Validate is script 1, Clean script 2); online the app is
+#' upload-only.
 #'
 #' @param request Needed for bookmarking; unused.
 #' @noRd
 app_ui <- function(request) {
   hosted <- ck_is_server()
-  bslib::page_navbar(
-    id = "nav",
-    title = htmltools::span(
-      shiny::icon("broom"),
-      "cleaningkit"
-    ),
-    window_title = "cleaningkit",
-    theme = ck_theme(),
-    fillable = FALSE,
-    sidebar = bslib::sidebar(
-      id = "status_sidebar",
-      title = "Progress",
-      width = 260,
-      open = "desktop",
-      shiny::uiOutput("status")
-    ),
+  tabs <- list(
     bslib::nav_panel(
       "Start",
       value = "start",
@@ -37,10 +24,50 @@ app_ui <- function(request) {
       mod_check_flow_ui("check_flow")
     ),
     bslib::nav_panel(
+      "Apply corrections",
+      value = "apply_flow",
+      icon = shiny::icon("broom"),
+      mod_apply_flow_ui("apply_flow")
+    )
+  )
+  if (!hosted) {
+    tabs <- c(tabs, folder_tabs())
+  }
+  do.call(
+    bslib::page_navbar,
+    c(
+      list(
+        id = "nav",
+        title = htmltools::span(shiny::icon("broom"), "cleaningkit"),
+        window_title = "cleaningkit",
+        theme = ck_theme(),
+        fillable = FALSE,
+        sidebar = if (!hosted) {
+          bslib::sidebar(
+            id = "status_sidebar",
+            title = "Folder progress",
+            width = 260,
+            open = "closed",
+            shiny::uiOutput("status")
+          )
+        }
+      ),
+      tabs
+    )
+  )
+}
+
+#' The folder workflow: Project, Validate, Clean and the Run log
+#'
+#' Only when the app runs locally.
+#' @noRd
+folder_tabs <- function() {
+  list(
+    bslib::nav_panel(
       "Project",
       value = "project",
       icon = shiny::icon("folder-open"),
-      mod_project_ui("project", hosted = hosted)
+      mod_project_ui("project")
     ),
     bslib::nav_menu(
       "Validate",

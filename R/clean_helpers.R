@@ -42,16 +42,24 @@ reviewed_files <- function(project_dir, pattern) {
 #' @param raw_data The data that was validated.
 #' @param clean The `clean` section of the profile.
 #' @param general The `general` section of the profile.
+#' @param folder Where the workbooks are; uploads are read from the session
+#'   workspace instead of `output/follow_ups/`.
 #' @return A list with `file_checks` (a list with one `check_log_files()`
 #'   table per sheet), `cleaning_log` (as evaluated, with an
 #'   `evaluation_issue` column) and `evaluation_log`.
 #' @noRd
-read_reviewed <- function(project_dir, raw_data, clean, general) {
+read_reviewed <- function(
+  project_dir,
+  raw_data,
+  clean,
+  general,
+  folder = file.path(project_dir, "output", "follow_ups")
+) {
   if (is.null(raw_data)) {
     stop("Load the data that was validated first.")
   }
-  folder <- file.path(project_dir, "output", "follow_ups")
-  if (nrow(reviewed_files(project_dir, clean$file_pattern)) == 0) {
+  found <- list.files(folder, pattern = clean$file_pattern, ignore.case = TRUE)
+  if (length(found[!grepl("^~\\$", found)]) == 0) {
     stop(
       "No reviewed workbook in output/follow_ups/. Reviewers save the edited ",
       "copy with a name ending in _edited (e.g. 2026-11-20_follow-ups_edited.xlsm)."
@@ -194,6 +202,7 @@ write_annotated_log <- function(cleaning_log, evaluation_log, path) {
 #' @param cleaning_log The evaluated log from `read_reviewed()`.
 #' @param tool_choices,other_db From the Tool screen; needed for the other
 #'   responses.
+#' @param folder Where the reviewed workbooks are.
 #' @return A list with `clean_dataset`, `audit_log` (changes from the cleaning
 #'   log), `other_log`, `other_audit_log` (changes from the other responses),
 #'   `final_log` (the combined log for the final workbook) and `n_before`,
@@ -206,7 +215,8 @@ apply_reviewed <- function(
   clean,
   general,
   tool_choices = NULL,
-  other_db = NULL
+  other_db = NULL,
+  folder = file.path(project_dir, "output", "follow_ups")
 ) {
   applied <- cleaningkit::apply_cleaning_log(
     raw_dataset = raw_data,
@@ -235,7 +245,7 @@ apply_reviewed <- function(
       stop("Load the XLSForm on the Tool screen: the other responses need it.")
     }
     other_log <- cleaningkit::read_other_responses(
-      path = file.path(project_dir, "output", "follow_ups"),
+      path = folder,
       dataset = clean_dataset,
       other_db = other_db,
       tool_choices = tool_choices,
@@ -342,8 +352,15 @@ split_check_rows <- function(check) {
 #' `export_final_output()` with the readme fields from the Final output
 #' screen.
 #'
+#' @param round_info Round memory to keep in the workbook, or `NULL`.
 #' @noRd
-export_final <- function(raw_data, clean_result, final, path) {
+export_final <- function(
+  raw_data,
+  clean_result,
+  final,
+  path,
+  round_info = NULL
+) {
   cleaningkit::export_final_output(
     raw_dataset = raw_data,
     clean_dataset = clean_result$clean_dataset,
@@ -353,7 +370,8 @@ export_final <- function(raw_data, clean_result, final, path) {
     data_collection_round = final$data_collection_round,
     prepared_by = final$prepared_by,
     project_description = final$project_description,
-    overwrite = TRUE
+    overwrite = TRUE,
+    round_info = round_info
   )
   if (!file.exists(path)) {
     stop("The final workbook was not written to ", path)
