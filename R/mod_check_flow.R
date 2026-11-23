@@ -117,6 +117,9 @@ mod_check_flow_ui <- function(id) {
       )
     ),
     shiny::uiOutput(ns("checks_card")),
+    # the translation preview sits above the results, so the texts that would
+    # be sent are the first thing seen after a preview run
+    shiny::uiOutput(ns("translation_card")),
     shiny::uiOutput(ns("results_card")),
     details_fold(ns("details"))
   )
@@ -423,6 +426,25 @@ mod_check_flow_server <- function(id) {
       outcome(out)
     })
 
+    output$translation_card <- shiny::renderUI({
+      out <- outcome()
+      preview <- if (!is.null(out)) translation_preview(out$other_responses)
+      if (is.null(preview)) {
+        return(NULL)
+      }
+      bslib::card(
+        bslib::card_header(htmltools::strong(
+          "Translation preview: what would be sent"
+        )),
+        bslib::card_body(
+          translation_preview_box(
+            preview,
+            DT::DTOutput(session$ns("translation_preview"))
+          )
+        )
+      )
+    })
+
     output$results_card <- shiny::renderUI({
       out <- outcome()
       if (is.null(out)) {
@@ -462,18 +484,11 @@ mod_check_flow_server <- function(id) {
               DT::DTOutput(ns("enumerators"))
             )
           ),
-          {
-            preview <- translation_preview(out$other_responses)
-            if (!is.null(preview)) {
-              translation_preview_box(
-                preview,
-                DT::DTOutput(ns("translation_preview"))
-              )
-            } else if (
-              identical(out$translate, "send") && !is.null(out$other_responses)
-            ) {
-              translation_sent_note()
-            }
+          # a preview is shown above this card instead (translation_card)
+          if (
+            identical(out$translate, "send") && !is.null(out$other_responses)
+          ) {
+            translation_sent_note()
           },
           if (is.null(out$combined_log)) {
             htmltools::p(class = "text-danger", "No check produced results.")
