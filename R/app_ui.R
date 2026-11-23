@@ -1,13 +1,15 @@
 #' App UI
 #'
-#' The navbar follows the two halves of the cleaningkit workflow: Validate
-#' holds the steps of example script 1, Clean those of example script 2.
+#' Start opens on two plain choices. "Check new data" is the upload-only
+#' flow; the Project, Validate and Clean tabs keep the step-by-step folder
+#' workflow of the example scripts (Validate is script 1, Clean script 2).
 #'
 #' @param request Needed for bookmarking; unused.
 #' @noRd
 app_ui <- function(request) {
   hosted <- ck_is_server()
   bslib::page_navbar(
+    id = "nav",
     title = htmltools::span(
       shiny::icon("broom"),
       "cleaningkit"
@@ -21,6 +23,18 @@ app_ui <- function(request) {
       width = 260,
       open = "desktop",
       shiny::uiOutput("status")
+    ),
+    bslib::nav_panel(
+      "Start",
+      value = "start",
+      icon = shiny::icon("house"),
+      mod_start_ui("start")
+    ),
+    bslib::nav_panel(
+      "Check new data",
+      value = "check_flow",
+      icon = shiny::icon("upload"),
+      mod_check_flow_ui("check_flow")
     ),
     bslib::nav_panel(
       "Project",

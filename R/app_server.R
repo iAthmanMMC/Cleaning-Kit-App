@@ -6,6 +6,10 @@ app_server <- function(input, output, session, project_dir = NULL) {
   store <- new_store()
   hosted <- ck_is_server()
 
+  mod_start_server("start", go = function(value) {
+    bslib::nav_select("nav", value, session = session)
+  })
+  mod_check_flow_server("check_flow")
   mod_project_server(
     "project",
     store,
