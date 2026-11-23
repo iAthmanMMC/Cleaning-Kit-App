@@ -82,15 +82,90 @@ detect_general <- function(df, general = default_profile()$general) {
 }
 
 #' Read the first sheet of a download as text, for detection
+#'
+#' Stops with a plain message for the usual mix-ups: a CSV export, a file
+#' that isn't Excel, or one of the app's own workbooks put in the download
+#' slot.
+#'
+#' @param name The file name the user uploaded, for messages.
 #' @noRd
-read_download_text <- function(path) {
-  df <- tryCatch(
-    readxl::read_excel(path, sheet = 1, col_types = "text"),
+read_download_text <- function(path, name = basename(path)) {
+  if (grepl("\\.csv$", name, ignore.case = TRUE)) {
+    stop(
+      name,
+      " is a CSV file. Download the data from ONA again as Excel (XLSX)."
+    )
+  }
+  sheets <- excel_sheets_safe(path)
+  if (length(sheets) == 0) {
+    stop(
+      name,
+      " could not be opened as an Excel file. Download the data from ONA ",
+      "again as Excel (XLSX)."
+    )
+  }
+  if (is_app_workbook(sheets)) {
+    stop(
+      name,
+      " is a workbook made by this app, not a download from ONA. Upload ",
+      "it as last round's workbook, and the data downloaded from ONA here."
+    )
+  }
+  if (all(c("survey", "choices") %in% sheets)) {
+    stop(
+      name,
+      " is the questionnaire (XLSForm), not a download from ONA. Upload the ",
+      "data downloaded from ONA here."
+    )
+  }
+  df <- readxl::read_excel(path, sheet = 1, col_types = "text")
+  as.data.frame(df, stringsAsFactors = FALSE, check.names = FALSE)
+}
+
+#' Is this a review or final workbook made by the app?
+#' @param sheets Sheet names of the file.
+#' @noRd
+is_app_workbook <- function(sheets) {
+  "_ck_round" %in% sheets
+}
+
+#' Load the questionnaire, with a plain message when the file isn't one
+#'
+#' @param name What to call the file in messages: the uploaded file name, or
+#'   a description of the copy kept in a workbook.
+#' @noRd
+load_questionnaire <- function(path, language, name) {
+  sheets <- excel_sheets_safe(path)
+  if (length(sheets) == 0) {
+    stop(name, " could not be opened as an Excel file.")
+  }
+  if (is_app_workbook(sheets)) {
+    stop(
+      name,
+      " is a workbook made by this app, not the questionnaire. Upload the ",
+      "XLSForm (the Excel file the survey was built from)."
+    )
+  }
+  if (!all(c("survey", "choices") %in% sheets)) {
+    stop(
+      name,
+      " doesn't look like an XLSForm: an XLSForm has a 'survey' and a ",
+      "'choices' sheet, and this file has ",
+      paste0("'", sheets, "'", collapse = ", "),
+      "."
+    )
+  }
+  tryCatch(
+    load_tool(path, language = language),
     error = function(e) {
-      stop("The download could not be read as an Excel file (.xlsx).")
+      stop(
+        "Could not read the questionnaire (",
+        name,
+        "): ",
+        conditionMessage(e)
+      )
     }
   )
-  as.data.frame(df, stringsAsFactors = FALSE, check.names = FALSE)
 }
 
 #' Read what earlier rounds checked from uploaded files
@@ -158,6 +233,16 @@ questionnaire_path <- function(xlsform, previous, dir) {
   dest
 }
 
+#' What to call the questionnaire in messages
+#' @noRd
+questionnaire_name <- function(xlsform) {
+  if (!is.null(xlsform) && nrow(xlsform) > 0) {
+    xlsform$name[1]
+  } else {
+    "The questionnaire kept in last round's workbook"
+  }
+}
+
 #' Put the logical checklist where the logical check looks for it
 #'
 #' An uploaded checklist wins, then the one kept in the last workbook. With
@@ -221,7 +306,7 @@ start_round <- function(
   if (is.null(download) || nrow(download) == 0) {
     stop("Upload the new ONA download first.")
   }
-  first_rows <- read_download_text(download$datapath[1])
+  first_rows <- read_download_text(download$datapath[1], download$name[1])
 
   # what earlier rounds checked: their survey IDs, settings and questionnaire
   general0 <- detect_general(first_rows)
@@ -248,7 +333,11 @@ start_round <- function(
 
   xlsform_path <- questionnaire_path(xlsform, previous, dir)
   checklist_path <- place_checklist(checklist, previous, dir)
-  tool <- load_tool(xlsform_path, language = profile$general$label_language)
+  tool <- load_questionnaire(
+    xlsform_path,
+    language = profile$general$label_language,
+    name = questionnaire_name(xlsform)
+  )
 
   raw <- cleaningkit::read_raw_data(
     filename = download$datapath[1],
@@ -302,6 +391,65 @@ round_counts_text <- function(counts, previous = NULL) {
     format(counts$n_new, big.mark = ","),
     if (counts$n_new == 1) " is new." else " are new."
   )
+}
+
+#' Warnings about what the round found, in plain words
+#'
+#' @return A character vector; empty when nothing looks wrong.
+#' @noRd
+round_warnings <- function(counts, previous = NULL) {
+  out <- character(0)
+  if (counts$n_new == 0) {
+    out <- c(
+      out,
+      paste(
+        "Every survey in this download was checked before, so there is",
+        "nothing new to check. Is this the latest download from ONA?"
+      )
+    )
+  } else if (!is.null(previous) && counts$n_checked_before == 0) {
+    out <- c(
+      out,
+      paste(
+        "None of the surveys in this download were checked before. If you",
+        "expected some, check that last round's workbook comes from the",
+        "same survey."
+      )
+    )
+  }
+  out
+}
+
+#' Which checks the standard run includes, and which it leaves out
+#'
+#' Starts from the checks switched on in the round's settings and leaves out
+#' those the download or the files can't support, with the reason.
+#'
+#' @param round From `start_round()`.
+#' @return A list with `selected` (check ids) and `left_out` (named character:
+#'   check id -> reason).
+#' @noRd
+plan_checks <- function(round, checks = ck_checks()) {
+  settings <- round$profile$checks
+  on <- names(checks)[vapply(
+    names(checks),
+    function(cid) isTRUE(settings[[cid]]$enabled),
+    logical(1)
+  )]
+  left_out <- character(0)
+  for (cid in on) {
+    missing <- check_missing_columns(cid, settings[[cid]]$args, round$raw_data)
+    if (length(missing)) {
+      left_out[[cid]] <- paste0(
+        "the download has no ",
+        paste(missing, collapse = ", "),
+        if (length(missing) == 1) " column" else " columns"
+      )
+    } else if (cid == "logical" && is.null(round$checklist_path)) {
+      left_out[[cid]] <- "no logical checklist was uploaded (see Advanced)"
+    }
+  }
+  list(selected = setdiff(on, names(left_out)), left_out = left_out)
 }
 
 #' Build the round memory for the review workbook

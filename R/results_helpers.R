@@ -106,3 +106,49 @@ enumerator_priority <- function(
   )
   res$enumerator_priority
 }
+
+#' Flags per check, in plain words for the upload screens
+#'
+#' @return `flags_per_check()` with plain column names, a check that could
+#'   not run saying so.
+#' @noRd
+plain_per_check <- function(results, logs, checks = ck_checks()) {
+  tab <- flags_per_check(results, logs, checks)
+  if (is.null(tab)) {
+    return(NULL)
+  }
+  failed <- tab$status == "failed"
+  data.frame(
+    Check = tab$check,
+    `Problems found` = ifelse(failed, "could not run", as.character(tab$flags)),
+    `Surveys affected` = ifelse(failed, "", as.character(tab$surveys)),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' The enumerator ranking, in plain words for the upload screens
+#'
+#' @param tab From `enumerator_priority()`.
+#' @noRd
+plain_enumerators <- function(tab, checks = ck_checks()) {
+  if (is.null(tab) || nrow(tab) == 0) {
+    return(NULL)
+  }
+  triggered <- as.character(tab$checks_triggered)
+  for (ch in checks) {
+    if (ch$kind != "log") {
+      next
+    }
+    triggered <- gsub(check_log_name(ch), ch$label, triggered, fixed = TRUE)
+  }
+  data.frame(
+    Enumerator = tab$enumerator,
+    Interviews = tab$n_interviews,
+    `With problems` = tab$flagged_interviews,
+    `Problems found` = tab$total_flags,
+    `Checks that found them` = gsub(";", ",", triggered, fixed = TRUE),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+}

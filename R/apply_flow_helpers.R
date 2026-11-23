@@ -115,7 +115,7 @@ start_apply <- function(workbooks, download, xlsform = NULL, dir) {
   profile <- profile_from_previous(info)
 
   general <- detect_general(
-    read_download_text(download$datapath[1]),
+    read_download_text(download$datapath[1], download$name[1]),
     profile$general
   )
   if ("uuid_column" %in% general$missing) {
@@ -131,7 +131,11 @@ start_apply <- function(workbooks, download, xlsform = NULL, dir) {
   g <- profile$general
 
   xlsform_path <- questionnaire_path(xlsform, info, dir)
-  tool <- load_tool(xlsform_path, language = g$label_language)
+  tool <- load_questionnaire(
+    xlsform_path,
+    language = g$label_language,
+    name = questionnaire_name(xlsform)
+  )
   raw <- cleaningkit::read_raw_data(
     filename = download$datapath[1],
     tool_survey = tool$tool_survey,
@@ -250,4 +254,47 @@ finish_apply <- function(state, dir) {
 #' @noRd
 round_final_file <- function(round_name) {
   final_file_name(paste0(round_name, "_4Mi_final_output"))
+}
+
+#' The evaluation of the reviewers' rows, in plain words
+#'
+#' @param ev The `evaluation_log` of `read_reviewed()`.
+#' @return Rows that must be fixed first, then those worth a look; `NULL`
+#'   when there are none.
+#' @noRd
+plain_evaluation <- function(ev) {
+  if (is.null(ev) || nrow(ev) == 0) {
+    return(NULL)
+  }
+  must <- ev$issue_type %in% .blocking_issues
+  out <- data.frame(
+    `Must fix?` = ifelse(must, "yes", "no"),
+    Row = ev$row,
+    `Survey ID` = ev$uuid,
+    Question = ev$question,
+    Action = ev$action,
+    Problem = ev$issue,
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+  out[order(!must), , drop = FALSE]
+}
+
+#' Differences between the clean data and the corrections, in plain words
+#'
+#' @param tied The `tied` rows of `split_check_rows()`.
+#' @noRd
+plain_disagreements <- function(tied) {
+  if (is.null(tied) || nrow(tied) == 0) {
+    return(NULL)
+  }
+  data.frame(
+    `Survey ID` = tied$uuid,
+    Question = tied$question,
+    `Value in the corrections` = tied$new_value_log,
+    `Value in the clean data` = tied$new_value_clean,
+    `What doesn't match` = tied$comment,
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
 }

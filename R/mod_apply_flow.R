@@ -66,7 +66,8 @@ mod_apply_flow_ui <- function(id) {
       )
     ),
     shiny::uiOutput(ns("problems_card")),
-    shiny::uiOutput(ns("final_card"))
+    shiny::uiOutput(ns("final_card")),
+    details_fold(ns("details"))
   )
 }
 
@@ -75,10 +76,13 @@ mod_apply_flow_server <- function(id) {
   shiny::moduleServer(id, function(input, output, session) {
     store <- new_store()
     state <- shiny::reactiveVal(NULL)
+    problem <- shiny::reactiveVal(NULL)
+    apply_problem <- shiny::reactiveVal(NULL)
     applied <- shiny::reactiveVal(NULL)
     # the session's temporary folder; an environment so observers can replace it
     ws <- new.env()
     ws$dir <- NULL
+    mod_runlog_server("details", store)
 
     session$onSessionEnded(function() {
       if (!is.null(ws$dir)) remove_workspace(ws$dir)
@@ -105,6 +109,8 @@ mod_apply_flow_server <- function(id) {
       ws$dir <- new_workspace()
       state(NULL)
       applied(NULL)
+      problem(NULL)
+      apply_problem(NULL)
 
       workbooks <- input$workbooks
       download <- input$download
@@ -122,14 +128,20 @@ mod_apply_flow_server <- function(id) {
         },
         step = "Read the files",
         dir = dir,
+        notify = FALSE,
         full = TRUE
       )
       if (is.null(res$error)) {
         state(res$value)
+      } else {
+        problem(res$error)
       }
     })
 
     output$round_status <- shiny::renderUI({
+      if (!is.null(problem())) {
+        return(problem_box(problem()))
+      }
       st <- state()
       if (is.null(st)) {
         return(NULL)
@@ -220,24 +232,14 @@ mod_apply_flow_server <- function(id) {
     output$problems <- DT::renderDT({
       st <- state()
       shiny::req(st)
-      ev <- st$reviewed$evaluation_log
-      shiny::req(ev, nrow(ev) > 0)
-      ev$severity <- ifelse(
-        ev$issue_type %in% .blocking_issues,
-        "must fix",
-        "check"
-      )
-      ev <- ev[
-        order(ev$severity != "must fix"),
-        c("severity", setdiff(names(ev), "severity")),
-        drop = FALSE
-      ]
+      ev <- plain_evaluation(st$reviewed$evaluation_log)
+      shiny::req(ev)
       dt_table(ev, page_length = 10) |>
         DT::formatStyle(
-          "severity",
+          "Must fix?",
           target = "row",
           backgroundColor = DT::styleEqual(
-            c("must fix", "check"),
+            c("yes", "no"),
             c("#F8D7DA", "#FFF4CC")
           )
         )
@@ -261,19 +263,26 @@ mod_apply_flow_server <- function(id) {
       st <- state()
       shiny::req(st)
       dir <- ws$dir
+      apply_problem(NULL)
       res <- run_step(
         store,
         function() finish_apply(st, dir),
         step = "Apply the corrections",
         dir = dir,
+        notify = FALSE,
         full = TRUE
       )
       if (is.null(res$error)) {
         applied(res$value)
+      } else {
+        apply_problem(res$error)
       }
     })
 
     output$final_card <- shiny::renderUI({
+      if (!is.null(apply_problem())) {
+        return(problem_box(apply_problem()))
+      }
       out <- applied()
       st <- state()
       if (is.null(out) || is.null(st)) {
@@ -351,7 +360,7 @@ mod_apply_flow_server <- function(id) {
     output$disagree <- DT::renderDT({
       out <- applied()
       shiny::req(out, nrow(out$check$tied) > 0)
-      dt_table(out$check$tied, page_length = 10)
+      dt_table(plain_disagreements(out$check$tied), page_length = 10)
     })
 
     output$final <- shiny::downloadHandler(

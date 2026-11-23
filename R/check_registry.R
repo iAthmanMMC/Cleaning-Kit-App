@@ -606,3 +606,35 @@ run_check <- function(check, args, ctx) {
 check_log_name <- function(check) {
   eval(formals(check$fn)$log_name)
 }
+
+#' Column settings a check can't run without
+#'
+#' A check whose columns are not in the download is left out of the standard
+#' run, instead of failing with an R error. Optional columns (such as the
+#' interview location's fallback `location`) are not listed.
+#' @noRd
+.check_required_columns <- list(
+  duration = "column_to_check",
+  back_to_back = c("start_column", "end_column"),
+  country_of_interview = c(
+    "country_interview_col",
+    "nationality_col",
+    "journey_start_col"
+  ),
+  interview_time = "time_column",
+  interview_location = c("lat_column", "lon_column", "city_question"),
+  spatial_proximity = c("lat_column", "lon_column")
+)
+
+#' Columns a check needs that the data does not have
+#'
+#' @param cid Check id.
+#' @param args The check's settings (`settings[[cid]]$args`).
+#' @param data The download.
+#' @return The missing column names; empty when the check can run.
+#' @noRd
+check_missing_columns <- function(cid, args, data) {
+  needed <- unlist(args[.check_required_columns[[cid]]], use.names = FALSE)
+  needed <- needed[!is.na(needed) & nzchar(needed)]
+  setdiff(needed, names(data))
+}

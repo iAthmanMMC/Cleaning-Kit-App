@@ -117,7 +117,35 @@ mod_check_flow_ui <- function(id) {
       )
     ),
     shiny::uiOutput(ns("checks_card")),
-    shiny::uiOutput(ns("results_card"))
+    shiny::uiOutput(ns("results_card")),
+    details_fold(ns("details"))
+  )
+}
+
+#' The "Show details" fold at the foot of an upload screen
+#'
+#' The run log of that screen: every message, warning and error, for when
+#' something needs explaining.
+#' @noRd
+details_fold <- function(id) {
+  bslib::accordion(
+    class = "mt-3",
+    open = FALSE,
+    bslib::accordion_panel(
+      "Show details",
+      icon = shiny::icon("terminal"),
+      mod_runlog_ui(id, compact = TRUE)
+    )
+  )
+}
+
+#' A plain error box for a step that stopped
+#' @noRd
+problem_box <- function(message) {
+  htmltools::div(
+    class = "alert alert-danger mt-3",
+    htmltools::p(class = "mb-1", htmltools::strong("That didn't work.")),
+    htmltools::p(class = "mb-0", message)
   )
 }
 
@@ -127,10 +155,12 @@ mod_check_flow_server <- function(id) {
     store <- new_store()
     round <- shiny::reactiveVal(NULL)
     outcome <- shiny::reactiveVal(NULL)
+    problem <- shiny::reactiveVal(NULL)
     # the session's temporary folder; an environment so observers can replace it
     ws <- new.env()
     ws$dir <- NULL
     checks <- ck_checks()
+    mod_runlog_server("details", store)
 
     session$onSessionEnded(function() {
       if (!is.null(ws$dir)) remove_workspace(ws$dir)
@@ -185,6 +215,7 @@ mod_check_flow_server <- function(id) {
       ws$dir <- new_workspace(templates = TRUE)
       round(NULL)
       outcome(NULL)
+      problem(NULL)
 
       download <- input$download
       previous <- if (next_round) input$previous
@@ -206,18 +237,25 @@ mod_check_flow_server <- function(id) {
         },
         step = "Read the files",
         dir = dir,
+        notify = FALSE,
         full = TRUE
       )
       if (is.null(res$error)) {
         round(res$value)
+      } else {
+        problem(res$error)
       }
     })
 
     output$round_status <- shiny::renderUI({
+      if (!is.null(problem())) {
+        return(problem_box(problem()))
+      }
       r <- round()
       if (is.null(r)) {
         return(NULL)
       }
+      warnings <- round_warnings(r$counts, r$previous)
       g <- r$general
       missing <- c(
         enumerator_column = "enumerator",
@@ -226,18 +264,15 @@ mod_check_flow_server <- function(id) {
       htmltools::div(
         class = paste(
           "alert mt-3",
-          if (r$counts$n_new == 0) "alert-warning" else "alert-success"
+          if (length(warnings)) "alert-warning" else "alert-success"
         ),
         htmltools::p(
           class = "mb-1",
           round_counts_text(r$counts, r$previous)
         ),
-        if (r$counts$n_new == 0) {
-          htmltools::p(
-            class = "mb-1",
-            "There is nothing new to check. Is this the latest download?"
-          )
-        },
+        lapply(warnings, function(w) {
+          htmltools::p(class = "mb-1", status_icon("warn"), " ", w)
+        }),
         htmltools::p(
           class = "mb-0 small",
           "Survey ID column: ",
@@ -269,39 +304,53 @@ mod_check_flow_server <- function(id) {
         return(NULL)
       }
       ns <- session$ns
-      saved <- r$profile$checks
-      choices <- stats::setNames(
-        names(checks),
-        vapply(checks, `[[`, "", "label")
-      )
-      selected <- names(checks)[vapply(
-        names(checks),
-        function(cid) isTRUE(saved[[cid]]$enabled),
-        logical(1)
-      )]
-      # the logical check needs a checklist (uploaded under Advanced)
-      if (is.null(r$checklist_path)) {
-        selected <- setdiff(selected, "logical")
-      }
+      plan <- plan_checks(r, checks)
+      label <- function(cid) checks[[cid]]$label
       bslib::card(
         bslib::card_header(htmltools::strong("2. Checks")),
         bslib::card_body(
-          shiny::checkboxGroupInput(
-            ns("checks"),
-            "Checks to run",
-            choices = choices,
-            selected = selected
-          ),
-          htmltools::p(
-            class = "ck-hint",
-            "The settings of each check come from last round's workbook, or ",
-            "the defaults in the first round.",
-            if (is.null(r$checklist_path)) {
-              paste(
-                "Logical checks need a logical checklist: upload one under",
-                "Advanced to run them."
+          htmltools::p(paste0(
+            "The standard 4Mi checks will run on the ",
+            r$counts$n_new,
+            " new surveys: ",
+            paste(vapply(plan$selected, label, ""), collapse = ", "),
+            "."
+          )),
+          if (length(plan$left_out)) {
+            htmltools::div(
+              class = "ck-hint mb-2",
+              "Left out:",
+              htmltools::tags$ul(
+                class = "mb-0",
+                lapply(names(plan$left_out), function(cid) {
+                  htmltools::tags$li(
+                    paste0(label(cid), ": ", plan$left_out[[cid]], ".")
+                  )
+                })
               )
-            }
+            )
+          },
+          bslib::accordion(
+            open = FALSE,
+            class = "mb-3",
+            bslib::accordion_panel(
+              "Change which checks run",
+              icon = shiny::icon("list-check"),
+              shiny::checkboxGroupInput(
+                ns("checks"),
+                label = NULL,
+                choices = stats::setNames(
+                  names(checks),
+                  vapply(names(checks), label, "")
+                ),
+                selected = plan$selected
+              ),
+              htmltools::p(
+                class = "ck-hint",
+                "The settings of each check come from last round's ",
+                "workbook, or the 4Mi defaults in the first round."
+              )
+            )
           ),
           shiny::actionButton(
             ns("run"),
@@ -316,6 +365,7 @@ mod_check_flow_server <- function(id) {
     shiny::observeEvent(input$run, {
       r <- round()
       shiny::req(r)
+      # the checkbox list is on the page even while its fold is closed
       selected <- intersect(names(checks), input$checks)
       if (length(selected) == 0) {
         shiny::showNotification("Choose at least one check.", type = "warning")
@@ -346,10 +396,9 @@ mod_check_flow_server <- function(id) {
             )
           },
           step = "Combine the results",
-          notify = TRUE
+          notify = FALSE
         )
       }
-      notify_run(out$results, checks)
       outcome(out)
     })
 
@@ -370,7 +419,8 @@ mod_check_flow_server <- function(id) {
           if (length(failed)) {
             htmltools::div(
               class = "alert alert-warning py-2",
-              htmltools::strong("Some checks could not run: "),
+              htmltools::strong("Some checks could not run. "),
+              "The others ran; Show details at the foot of the page has more.",
               htmltools::tags$ul(lapply(failed, function(cid) {
                 htmltools::tags$li(
                   checks[[cid]]$label,
@@ -383,7 +433,7 @@ mod_check_flow_server <- function(id) {
           bslib::layout_columns(
             col_widths = c(6, 6),
             htmltools::div(
-              htmltools::h5("Flags per check"),
+              htmltools::h5("Problems found per check"),
               DT::DTOutput(ns("per_check"))
             ),
             htmltools::div(
@@ -398,7 +448,7 @@ mod_check_flow_server <- function(id) {
               class = "mt-3",
               shiny::downloadButton(
                 ns("workbook"),
-                "Download the reviewer workbook",
+                "Download the workbook for reviewers",
                 class = "btn-success"
               ),
               htmltools::p(
@@ -415,9 +465,8 @@ mod_check_flow_server <- function(id) {
     output$per_check <- DT::renderDT({
       out <- outcome()
       shiny::req(out)
-      tab <- flags_per_check(out$results, out$logs, checks)
+      tab <- plain_per_check(out$results, out$logs, checks)
       shiny::req(tab)
-      names(tab) <- c("Check", "Status", "Flags", "Surveys")
       dt_table(tab, page_length = 10)
     })
 
@@ -429,6 +478,7 @@ mod_check_flow_server <- function(id) {
         enumerator_priority(out$logs, r$raw_data, r$profile$general),
         error = function(e) NULL
       )
+      tab <- plain_enumerators(tab, checks)
       shiny::req(tab)
       dt_table(utils::head(tab, 50), page_length = 10)
     })
