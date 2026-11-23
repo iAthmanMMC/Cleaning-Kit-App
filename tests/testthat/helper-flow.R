@@ -103,9 +103,12 @@ local_round_workbook <- function(n = 12, env = parent.frame()) {
   cl <- set_action(cl, "uuid-0006", "_duration", "discard")
   cl <- set_action(cl, "uuid-0007", "Q21", "recoded", "4")
   cl <- set_action(cl, "uuid-0005", "Q31", "recoded", "Somalia")
-  oth[[8]][oth$uuid == "uuid-0004"] <- "Somaliland region"
-  oth[[9]][oth$uuid == "uuid-0008"] <- "Somalia"
-  oth[[10]][oth$uuid == "uuid-0012"] <- "Yes"
+  # review columns by header, not position: columns such as `translation`
+  # can be added before them
+  col <- function(pattern) grep(pattern, names(oth), ignore.case = TRUE)[1]
+  oth[[col("^input translation")]][oth$uuid == "uuid-0004"] <- "Somaliland region"
+  oth[[col("^correct to existing")]][oth$uuid == "uuid-0008"] <- "Somalia"
+  oth[[col("^invalid other")]][oth$uuid == "uuid-0012"] <- "Yes"
   wb <- openxlsx::loadWorkbook(path)
   openxlsx::writeData(wb, "cleaning_log", cl)
   openxlsx::writeData(wb, "other_responses", oth)

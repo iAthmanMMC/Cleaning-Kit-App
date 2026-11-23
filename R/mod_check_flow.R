@@ -352,6 +352,19 @@ mod_check_flow_server <- function(id) {
               )
             )
           ),
+          # On the page rather than in a fold, so nobody sends texts without
+          # seeing the choice. Starts at "off" every round; the choice is not
+          # kept in the workbook.
+          htmltools::div(
+            class = "border rounded p-3 mb-3",
+            shiny::radioButtons(
+              ns("translate"),
+              "Translate the \"other\" responses into English?",
+              choices = translate_choices(),
+              selected = shiny::isolate(input$translate) %||% "off"
+            ),
+            htmltools::p(class = "ck-hint mb-0", translate_hint())
+          ),
           shiny::actionButton(
             ns("run"),
             "Run the checks",
@@ -378,6 +391,13 @@ mod_check_flow_server <- function(id) {
       r$profile$checks <- settings
       round(r)
 
+      # applied to this run only, after the profile was stored, so the
+      # workbook's memory never carries "send" into the next round
+      translate <- input$translate %||% "off"
+      if (!is.null(settings$other_responses)) {
+        settings$other_responses$args$translate <- translate
+      }
+
       ctx <- check_context(
         raw_data = r$raw_data,
         tool_survey = r$tool$tool_survey,
@@ -399,6 +419,7 @@ mod_check_flow_server <- function(id) {
           notify = FALSE
         )
       }
+      out$translate <- translate
       outcome(out)
     })
 
@@ -441,6 +462,19 @@ mod_check_flow_server <- function(id) {
               DT::DTOutput(ns("enumerators"))
             )
           ),
+          {
+            preview <- translation_preview(out$other_responses)
+            if (!is.null(preview)) {
+              translation_preview_box(
+                preview,
+                DT::DTOutput(ns("translation_preview"))
+              )
+            } else if (
+              identical(out$translate, "send") && !is.null(out$other_responses)
+            ) {
+              translation_sent_note()
+            }
+          },
           if (is.null(out$combined_log)) {
             htmltools::p(class = "text-danger", "No check produced results.")
           } else {
@@ -468,6 +502,14 @@ mod_check_flow_server <- function(id) {
       tab <- plain_per_check(out$results, out$logs, checks)
       shiny::req(tab)
       dt_table(tab, page_length = 10)
+    })
+
+    output$translation_preview <- DT::renderDT({
+      out <- outcome()
+      shiny::req(out)
+      preview <- translation_preview(out$other_responses)
+      shiny::req(preview, nrow(preview) > 0)
+      dt_table(preview, page_length = 10)
     })
 
     output$enumerators <- DT::renderDT({
